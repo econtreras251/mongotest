@@ -22,8 +22,9 @@ export default class Product {
 
 	async serialize(productId) {
 		const product = await this.findById(productId);
-		const relatedIds = product.relatedProducts.map(({ _id }) => _id);
-		const relatedProducts = await this.findByIds(relatedIds);
+		const relatedProducts = await this.findByIds(
+			product.relatedProducts
+		);
 
 		return {
 			id: product._id.toString(),
@@ -34,13 +35,21 @@ export default class Product {
 			price: product.salePrice,
 			listPrice: product.msrp,
 			discount:
-				product.salePrice > product.msrp
-					? product.salePrice - product.msrp
-					: null,
+				product.salePrice < product.msrp
+					? product.msrp - product.salePrice
+					: 0,
+			discountPercent:
+				product.salePrice < product.msrp
+					? Math.floor(
+							((product.msrp - product.salePrice) /
+								product.salePrice) *
+								100
+					  )
+					: 0,
 			relatedProducts: relatedProducts.map(relatedProduct => ({
 				id: relatedProduct._id.toString(),
 				title: relatedProduct.name,
-				brandName: relatedIds.brand
+				brandName: relatedProduct.brand
 			}))
 		};
 	}

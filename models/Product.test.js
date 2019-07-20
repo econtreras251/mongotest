@@ -85,3 +85,102 @@ describe('findByIds', () => {
 		expect(result).toEqual([]);
 	});
 });
+
+describe('findByBrand', () => {
+	test('Should return matching documents with no sort', async () => {
+		const { product1, product3 } = await createSampleProducts();
+		const result = await product.findByBrand('Bernina');
+		expect(result).toEqual([product1, product3]);
+	});
+
+	test('Should return matching documents with custom sorting', async () => {
+		const { product1, product3 } = await createSampleProducts();
+		const result = await product.findByBrand('Bernina', {
+			salePrice: 1
+		});
+		expect(result).toEqual([product3, product1]);
+	});
+
+	test('Should return empty array if there are no matches', async () => {
+		const result = await product.findByBrand('Unknown');
+		expect(result).toEqual([]);
+	});
+});
+
+describe('Serialize', () => {
+	test('Should return correct shape', async () => {
+		const { product4 } = await createSampleProducts();
+		const result = await product.serialize(product4._id);
+
+		expect(result).toMatchObject({
+			id: String(product4._id),
+			model: 'NQ3600D',
+			title: 'Sewing & Embroidery Machine',
+			brandName: 'Brother',
+			price: 219.99,
+			listPrice: 249.99
+		});
+		expect(result.sku).toEqual(expect.any(String));
+	});
+
+	test('should return the correct SKU', async () => {
+		const { product4 } = await createSampleProducts();
+		const { sku } = await product.serialize(product4._id);
+		expect(sku).toBe('Brother-NQ3600D');
+	});
+
+	test('should return the correct discount if msrp is higher than sale price', async () => {
+		const { product4 } = await createSampleProducts();
+		const { discount, discountPercent } = await product.serialize(
+			product4._id
+		);
+		expect(discount).toBe(30);
+		expect(discountPercent).toBe(13);
+	});
+
+	test('should return a zero discount if msrp is lower than sale price', async () => {
+		const { product1 } = await createSampleProducts();
+		const { discount, discountPercent } = await product.serialize(
+			product1._id
+		);
+		expect(discount).toBe(0);
+		expect(discountPercent).toBe(0);
+	});
+
+	test('should return a zero discount if msrp is not set', async () => {
+		const { product2 } = await createSampleProducts();
+		const { discount, discountPercent } = await product.serialize(
+			product2._id
+		);
+		expect(discount).toBe(0);
+		expect(discountPercent).toBe(0);
+	});
+
+	test('should return the correct related products', async () => {
+		const {
+			product1,
+			product3,
+			product4
+		} = await createSampleProducts();
+		const { relatedProducts } = await product.serialize(product4._id);
+
+		expect(relatedProducts).toEqual([
+			{
+				id: String(product1._id),
+				title: 'PLUS Sewing Quilting Machine',
+				brandName: 'Bernina'
+			},
+			{
+				id: String(product3._id),
+				title: 'L460 Overlocker',
+				brandName: 'Bernina'
+			}
+		]);
+	});
+
+	test('should return an empty array if there are no related products', async () => {
+		const { product1 } = await createSampleProducts();
+		const { relatedProducts } = await product.serialize(product1._id);
+		expect(relatedProducts).toEqual([]);
+	});
+});
